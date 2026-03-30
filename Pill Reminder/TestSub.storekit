@@ -1,0 +1,132 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "25DE4C23",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "B112D9A1",
+      "localizations" : [
+
+      ],
+      "name" : "PillReminderPro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "C3A4F9E1",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Weekly access plan",
+              "displayName" : "Weekly Access",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.dev.pillreminder.weekly",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "WeeklyAccess",
+          "subscriptionGroupID" : "B112D9A1",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "7.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "D6C7A2B4",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly access plan",
+              "displayName" : "Monthly Access",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.dev.pillreminder.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "MonthlyAccess",
+          "subscriptionGroupID" : "B112D9A1",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "44.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "E8F1B7C3",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Yearly access plan",
+              "displayName" : "Yearly Access",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.dev.pillreminder.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "YearlyAccess",
+          "subscriptionGroupID" : "B112D9A1",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 5,
+    "minor" : 0
+  }
+}
