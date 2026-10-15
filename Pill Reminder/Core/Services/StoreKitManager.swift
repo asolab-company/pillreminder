@@ -4,6 +4,8 @@ import StoreKit
 
 @MainActor
 final class StoreKitManager: ObservableObject {
+    private static let legacyPremiumFlagKey = "pill_reminder_web_premium_unlocked"
+
     @Published private(set) var productsByID: [String: Product] = [:]
     @Published private(set) var hasActiveSubscription = false
     @Published private(set) var isLoadingProducts = false
@@ -23,11 +25,12 @@ final class StoreKitManager: ObservableObject {
     }
 
     func loadProductsIfNeeded() async {
-        guard !didLoadProducts else { return }
+        guard !didLoadProducts, !isLoadingProducts else { return }
         await loadProducts()
     }
 
     func loadProducts() async {
+        guard !isLoadingProducts else { return }
         isLoadingProducts = true
         defer { isLoadingProducts = false }
 
@@ -74,6 +77,7 @@ final class StoreKitManager: ObservableObject {
 
                 await transaction.finish()
                 await refreshEntitlementStatus()
+                AppsFlyerService.shared.trackSubscription(productID: productID)
                 return hasActiveSubscription
 
             case .pending:
@@ -129,7 +133,11 @@ final class StoreKitManager: ObservableObject {
             break
         }
 
-        hasActiveSubscription = isUnlocked
+        hasActiveSubscription = isUnlocked || hasLegacyPremiumAccess()
+    }
+
+    private func hasLegacyPremiumAccess() -> Bool {
+        UserDefaults.standard.bool(forKey: Self.legacyPremiumFlagKey)
     }
 
     private func observeTransactionUpdates() -> Task<Void, Never> {

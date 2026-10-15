@@ -57,7 +57,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.dev.pillreminder.weekly",
+          "productID" : "pillreminderweekly",
           "recurringSubscriptionPeriod" : "P1W",
           "referenceName" : "WeeklyAccess",
           "subscriptionGroupID" : "B112D9A1",
@@ -85,7 +85,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.dev.pillreminder.monthly",
+          "productID" : "pillremindermonthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "MonthlyAccess",
           "subscriptionGroupID" : "B112D9A1",
@@ -113,7 +113,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.dev.pillreminder.yearly",
+          "productID" : "pillreminderyearly",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "YearlyAccess",
           "subscriptionGroupID" : "B112D9A1",

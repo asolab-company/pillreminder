@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        AppsFlyerService.shared.configure(launchOptions: launchOptions)
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         MedicationReminderScheduler.shared.configureCategories()

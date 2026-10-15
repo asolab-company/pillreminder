@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MedicinesView: View {
+    @Environment(\.deviceSize) private var deviceSize
     let medications: [Medication]
     var onMedicationTap: (Medication) -> Void = { _ in }
 
@@ -93,11 +94,11 @@ struct MedicinesView: View {
     }
 
     private var emptyStateImageSize: CGFloat {
-        if DeviceSize.isExtraSmallDevice {
+        if deviceSize.isExtraSmallDevice {
             return 120
         }
 
-        if DeviceSize.isSmallDevice {
+        if deviceSize.isSmallDevice {
             return 136
         }
 

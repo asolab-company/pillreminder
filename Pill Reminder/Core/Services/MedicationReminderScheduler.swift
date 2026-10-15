@@ -198,11 +198,7 @@ final class MedicationReminderScheduler {
             trigger: trigger
         )
 
-        await withCheckedContinuation { continuation in
-            center.add(request) { _ in
-                continuation.resume()
-            }
-        }
+        try? await center.add(request)
     }
 
     private func isAuthorizedForScheduling() async -> Bool {
@@ -219,21 +215,11 @@ final class MedicationReminderScheduler {
     }
 
     private func requestAuthorization() async -> Bool {
-        await withCheckedContinuation { continuation in
-            center.requestAuthorization(options: [.alert, .badge, .sound]) {
-                granted,
-                _ in
-                continuation.resume(returning: granted)
-            }
-        }
+        (try? await center.requestAuthorization(options: [.alert, .badge, .sound])) ?? false
     }
 
     private func notificationSettings() async -> UNNotificationSettings {
-        await withCheckedContinuation { continuation in
-            center.getNotificationSettings { settings in
-                continuation.resume(returning: settings)
-            }
-        }
+        await center.notificationSettings()
     }
 
     private func removePendingMedicationRequests() async {
@@ -246,19 +232,11 @@ final class MedicationReminderScheduler {
     }
 
     private func pendingRequests() async -> [UNNotificationRequest] {
-        await withCheckedContinuation { continuation in
-            center.getPendingNotificationRequests { requests in
-                continuation.resume(returning: requests)
-            }
-        }
+        await center.pendingNotificationRequests()
     }
 
     private func deliveredRequests() async -> [UNNotification] {
-        await withCheckedContinuation { continuation in
-            center.getDeliveredNotifications { notifications in
-                continuation.resume(returning: notifications)
-            }
-        }
+        await center.deliveredNotifications()
     }
 
     private struct ReminderOccurrence {

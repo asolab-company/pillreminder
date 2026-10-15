@@ -105,8 +105,8 @@ struct PaywallView: View {
                             .clipShape(Capsule())
                             .shadow(color: Color(hex: "FF0A3D").opacity(0.25), radius: 8, y: 3)
                     }
-                    .disabled(storeKitManager.isPurchasing || storeKitManager.isRestoring)
-                    .opacity((storeKitManager.isPurchasing || storeKitManager.isRestoring) ? 0.8 : 1)
+                    .disabled(storeKitManager.isLoadingProducts || storeKitManager.isPurchasing || storeKitManager.isRestoring)
+                    .opacity((storeKitManager.isLoadingProducts || storeKitManager.isPurchasing || storeKitManager.isRestoring) ? 0.8 : 1)
                     .padding(.horizontal, 26)
                     .padding(.top, 14)
 

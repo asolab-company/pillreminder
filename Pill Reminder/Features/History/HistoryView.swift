@@ -9,6 +9,7 @@ struct HistoryTakenEntry: Identifiable {
 }
 
 struct HistoryView: View {
+    @Environment(\.deviceSize) private var deviceSize
     let entries: [HistoryTakenEntry]
 
     var body: some View {
@@ -68,11 +69,11 @@ struct HistoryView: View {
     }
 
     private var emptyStateImageSize: CGFloat {
-        if DeviceSize.isExtraSmallDevice {
+        if deviceSize.isExtraSmallDevice {
             return 120
         }
 
-        if DeviceSize.isSmallDevice {
+        if deviceSize.isSmallDevice {
             return 136
         }
 

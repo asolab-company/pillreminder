@@ -5,6 +5,14 @@ struct OnboardingView: View {
 
     let pages: [OnboardingPage] = [
         OnboardingPage(
+            titleLine1: "Track your",
+            titleLine2: "pulse",
+            subtitle:
+                "Advanced heart rate tracking for your phone",
+            heroImageName: "app_bg_onbording_2_1",
+            showsLegal: false
+        ),
+        OnboardingPage(
             titleLine1: "Never Miss",
             titleLine2: "a Dose",
             subtitle:
@@ -12,14 +20,7 @@ struct OnboardingView: View {
             heroImageName: "app_bg_onbording_1",
             showsLegal: true
         ),
-        OnboardingPage(
-            titleLine1: "Your Daily",
-            titleLine2: "Medication List",
-            subtitle:
-                "See what you need to take today.\nMark each dose as taken or skipped in seconds.",
-            heroImageName: "app_bg_onbording_2",
-            showsLegal: false
-        ),
+     
         OnboardingPage(
             titleLine1: "Timely",
             titleLine2: "Reminders",

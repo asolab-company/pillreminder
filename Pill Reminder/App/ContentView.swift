@@ -1,83 +1,100 @@
 import SwiftUI
 
+private enum AppStage {
+    case splash
+    case onboarding
+    case paywall
+    case main
+}
+
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var storeKitManager: StoreKitManager
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("hasUnlockedPro") private var hasUnlockedPro = false
-    @State private var showAnimatedSplash = true
-    @State private var isLaunchPaywallPresented = false
+    @State private var stage: AppStage = .splash
+    @State private var didFinishSplash = false
 
     var body: some View {
-        ZStack {
-            if showAnimatedSplash {
+        Group {
+            switch stage {
+            case .splash:
                 AnimatedLaunchSplashView {
-                    showAnimatedSplash = false
+                    Task { await finishSplash() }
                 }
-                .transition(.opacity)
-            } else {
-                Group {
-                    if hasCompletedOnboarding {
-                        MainMenuView()
-                    } else {
-                        OnboardingView {
-                            completeOnboardingOnce()
-                        }
+
+            case .onboarding:
+                OnboardingView {
+                    completeOnboardingOnce()
+                }
+
+            case .paywall:
+                PaywallView(
+                    onContinue: {
+                        hasUnlockedPro = true
+                        stage = .main
+                    },
+                    onSkip: {
+                        stage = .main
                     }
-                }
-                .transition(.opacity)
+                )
+                .environmentObject(storeKitManager)
+
+            case .main:
+                MainMenuView()
             }
         }
-        .animation(.easeInOut(duration: 0.22), value: showAnimatedSplash)
-        .onChange(of: showAnimatedSplash) { _, _ in
-            presentLaunchPaywallIfNeeded()
-        }
-        .onChange(of: hasCompletedOnboarding) { _, _ in
-            presentLaunchPaywallIfNeeded()
-        }
+        .preferredColorScheme(.light)
         .onChange(of: storeKitManager.hasActiveSubscription) { _, hasSubscription in
             hasUnlockedPro = hasSubscription
-            if hasSubscription {
-                isLaunchPaywallPresented = false
-            } else {
-                presentLaunchPaywallIfNeeded()
+            guard didFinishSplash else { return }
+
+            if hasSubscription, stage != .main {
+                stage = .main
             }
         }
-        .task {
-            await storeKitManager.loadProductsIfNeeded()
-            await storeKitManager.refreshEntitlementStatus()
-
-            hasUnlockedPro = storeKitManager.hasActiveSubscription
-
-            presentLaunchPaywallIfNeeded()
+        .onOpenURL { url in
+            AppsFlyerService.shared.handleOpen(url: url)
         }
-        .fullScreenCover(isPresented: $isLaunchPaywallPresented) {
-            PaywallView(
-                onContinue: {
-                    hasUnlockedPro = true
-                    isLaunchPaywallPresented = false
-                },
-                onSkip: {
-                    isLaunchPaywallPresented = false
-                }
-            )
-            .environmentObject(storeKitManager)
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            AppsFlyerService.shared.continueUserActivity(activity)
+        }
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            if phase == .active {
+                AppsFlyerService.shared.startRespectingTrackingAuthorization()
+            } else if phase == .background {
+                AppsFlyerService.shared.sceneDidEnterBackground()
+            }
         }
     }
 
     private func completeOnboardingOnce() {
         guard !hasCompletedOnboarding else { return }
         hasCompletedOnboarding = true
+        stage = .paywall
     }
 
-    private var hasProAccess: Bool {
-        hasUnlockedPro || storeKitManager.hasActiveSubscription
-    }
+    @MainActor
+    private func finishSplash() async {
+        guard !didFinishSplash else { return }
+        didFinishSplash = true
 
-    private func presentLaunchPaywallIfNeeded() {
-        guard !showAnimatedSplash else { return }
-        guard hasCompletedOnboarding else { return }
-        guard !hasProAccess else { return }
-        isLaunchPaywallPresented = true
+        await storeKitManager.refreshEntitlementStatus()
+        hasUnlockedPro = storeKitManager.hasActiveSubscription
+
+        if hasUnlockedPro {
+            stage = .main
+        } else if hasCompletedOnboarding {
+            stage = .paywall
+        } else {
+            stage = .onboarding
+        }
+
+        if !hasUnlockedPro {
+            Task {
+                await storeKitManager.loadProductsIfNeeded()
+            }
+        }
     }
 }
 

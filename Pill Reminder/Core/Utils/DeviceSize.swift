@@ -1,16 +1,21 @@
-import UIKit
+import SwiftUI
 
-@MainActor
-enum DeviceSize {
-    static var longestSide: CGFloat {
-        max(UIScreen.main.bounds.width, UIScreen.main.bounds.height)
+struct DeviceSize {
+    let size: CGSize
+
+    var longestSide: CGFloat {
+        max(size.width, size.height)
     }
 
-    static var isSmallDevice: Bool {
+    var isSmallDevice: Bool {
         longestSide <= 812
     }
 
-    static var isExtraSmallDevice: Bool {
+    var isExtraSmallDevice: Bool {
         longestSide <= 667
     }
+}
+
+extension EnvironmentValues {
+    @Entry var deviceSize = DeviceSize(size: .zero)
 }

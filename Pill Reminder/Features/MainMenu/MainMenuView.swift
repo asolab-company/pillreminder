@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 
 struct MainMenuView: View {
+    @Environment(\.deviceSize) private var deviceSize
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var storeKitManager: StoreKitManager
     @Query(sort: \Medication.startDate, order: .forward) private
@@ -22,6 +23,10 @@ struct MainMenuView: View {
     @State private var isCalendarPresented = false
     @State private var isPaywallPresented = false
     @State private var doseActionsByKey: [String: DoseActionStore.Value] = [:]
+    @State private var pulseMeasurements: [PulseMeasurementEntry] =
+        PulseMeasurementStore.load()
+    @State private var isPulseReaderPresented = false
+    @State private var shouldOpenPulseAfterPaywall = false
 
     var body: some View {
         ZStack {
@@ -41,6 +46,23 @@ struct MainMenuView: View {
                     )
                 case .history:
                     HistoryView(entries: historyEntries)
+                case .pulse:
+                    PulseMeasurementView(
+                        entries: pulseMeasurements,
+                        onStartMeasurement: {
+                            if hasProAccess {
+                                isPulseReaderPresented = true
+                            } else {
+                                shouldOpenPulseAfterPaywall = true
+                                isPaywallPresented = true
+                            }
+                        },
+                        onDelete: { entry in
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                pulseMeasurements = PulseMeasurementStore.delete(entry)
+                            }
+                        }
+                    )
                 case .settings:
                     SettingsView()
                 }
@@ -91,9 +113,18 @@ struct MainMenuView: View {
                 selectedTab: $selectedTab,
                 onAdd: {
                     if !hasProAccess && medications.count >= 1 {
+                        shouldOpenPulseAfterPaywall = false
                         isPaywallPresented = true
                     } else {
                         isAddMedicinePresented = true
+                    }
+                },
+                onPulse: {
+                    if hasProAccess {
+                        selectedTab = .pulse
+                    } else {
+                        shouldOpenPulseAfterPaywall = true
+                        isPaywallPresented = true
                     }
                 }
             )
@@ -121,12 +152,22 @@ struct MainMenuView: View {
                 onContinue: {
                     hasUnlockedPro = true
                     isPaywallPresented = false
+                    if shouldOpenPulseAfterPaywall {
+                        selectedTab = .pulse
+                        shouldOpenPulseAfterPaywall = false
+                    }
                 },
                 onSkip: {
                     isPaywallPresented = false
+                    shouldOpenPulseAfterPaywall = false
                 }
             )
             .environmentObject(storeKitManager)
+        }
+        .fullScreenCover(isPresented: $isPulseReaderPresented) {
+            PulseReaderView { entry in
+                pulseMeasurements = PulseMeasurementStore.add(entry)
+            }
         }
         .animation(.easeInOut(duration: 0.18), value: isRatingPromptPresented)
         .animation(.easeInOut(duration: 0.18), value: isCalendarPresented)
@@ -143,11 +184,6 @@ struct MainMenuView: View {
         }
         .onChange(of: medications.count) { _, _ in
             refreshReminderSchedule()
-        }
-        .onChange(of: selectedTab) { oldValue, newValue in
-            guard newValue == .history, !hasProAccess else { return }
-            selectedTab = oldValue == .history ? .list : oldValue
-            isPaywallPresented = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .doseActionsDidChange)) { _ in
             loadDoseActions()
@@ -644,11 +680,11 @@ struct MainMenuView: View {
     }
 
     private var emptyStateImageSize: CGFloat {
-        if DeviceSize.isExtraSmallDevice {
+        if deviceSize.isExtraSmallDevice {
             return 120
         }
 
-        if DeviceSize.isSmallDevice {
+        if deviceSize.isSmallDevice {
             return 136
         }
 
@@ -739,6 +775,7 @@ private struct MedicationCardPresentation {
 private struct MainMenuTabBar: View {
     @Binding var selectedTab: MainTab
     let onAdd: () -> Void
+    let onPulse: () -> Void
 
     var body: some View {
         ZStack {
@@ -813,10 +850,10 @@ private struct MainMenuTabBar: View {
                 }
 
                 MainTabItem(
-                    icon: "clock.arrow.circlepath",
-                    title: "History",
-                    isSelected: selectedTab == .history,
-                    action: { selectedTab = .history }
+                    icon: "heart",
+                    title: "Pulse",
+                    isSelected: selectedTab == .pulse,
+                    action: onPulse
                 )
                 MainTabItem(
                     icon: "gearshape",
@@ -860,6 +897,7 @@ private enum MainTab {
     case list
     case medicines
     case history
+    case pulse
     case settings
 }
 
