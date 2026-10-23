@@ -97,7 +97,7 @@ struct MedicationDetailsView: View {
                             .shadow(color: Color(hex: "FF0A3D").opacity(0.25), radius: 8, y: 3)
                     }
                     .buttonStyle(.plain)
-                
+
                 }
 
                 detailsSectionCard(
@@ -992,30 +992,4 @@ private enum MedicationDetailsStatus {
             return Color(hex: "8E97A6")
         }
     }
-}
-
-#Preview("Medication Details") {
-    let medication = Medication(
-        name: "Aspirin",
-        dosage: "100mg",
-        startDate: Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date(),
-        durationDays: 14,
-        intervalMinutes: 60
-    )
-
-    return MedicationDetailsView(medication: medication)
-        .modelContainer(for: Medication.self, inMemory: true)
-}
-
-#Preview("Medication Details - Completed") {
-    let medication = Medication(
-        name: "Aspirin",
-        dosage: "100mg",
-        startDate: Calendar.current.date(byAdding: .day, value: -20, to: Date()) ?? Date(),
-        durationDays: 7,
-        intervalMinutes: 60
-    )
-
-    return MedicationDetailsView(medication: medication)
-        .modelContainer(for: Medication.self, inMemory: true)
 }

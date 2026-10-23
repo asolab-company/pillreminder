@@ -1,4 +1,3 @@
-
 import SwiftUI
 import SwiftData
 
@@ -38,10 +37,4 @@ struct Pill_ReminderApp: App {
             withIntermediateDirectories: true
         )
     }
-}
-
-#Preview("App Root") {
-    ContentView()
-        .environmentObject(StoreKitManager())
-        .modelContainer(for: Medication.self, inMemory: true)
 }

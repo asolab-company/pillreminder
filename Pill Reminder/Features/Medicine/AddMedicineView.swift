@@ -673,8 +673,3 @@ private struct IntervalOption: Identifiable, Equatable {
 
     static let defaultOption = IntervalOption(id: 720, title: "Every 12 hours", minutes: 720)
 }
-
-#Preview("Add Medicine") {
-    AddMedicineView(defaultDate: Date())
-        .modelContainer(for: Medication.self, inMemory: true)
-}

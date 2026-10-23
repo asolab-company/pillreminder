@@ -1,6 +1,5 @@
 import Foundation
 import SwiftData
-import SwiftUI
 
 @Model
 final class Medication {
@@ -35,22 +34,4 @@ final class Medication {
         let endBoundary = calendar.startOfDay(for: endDate)
         return startOfDay >= startBoundary && startOfDay <= endBoundary
     }
-}
-
-#Preview("Medication Model") {
-    let medication = Medication(
-        name: "Aspirin",
-        dosage: "100mg",
-        startDate: Date(),
-        durationDays: 7,
-        intervalMinutes: 720
-    )
-
-    return VStack(spacing: 8) {
-        Text(medication.name)
-            .font(.headline)
-        Text(medication.dosage)
-            .foregroundStyle(.secondary)
-    }
-    .padding()
 }

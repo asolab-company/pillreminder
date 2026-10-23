@@ -42,7 +42,7 @@ struct PaywallView: View {
                         .foregroundStyle(Color(hex: "3B4353"))
                         .multilineTextAlignment(.center)
                         .lineSpacing(1)
-                        
+
                         .fixedSize(horizontal: false, vertical: true)
                         .layoutPriority(2)
                         .padding(.top, 12)
@@ -50,19 +50,24 @@ struct PaywallView: View {
 
                     VStack(spacing: 10) {
                         ForEach(SubscriptionPlan.allCases, id: \.self) { plan in
-                            PaywallPlanCard(
-                                plan: plan,
-                                subtitle: storeKitManager.priceText(
-                                    for: plan.productID,
-                                    periodSuffix: plan.periodSuffix
-                                ),
-                                isSelected: selectedPlan == plan
-                            )
-                            .onTapGesture {
+                            Button {
                                 withAnimation(.easeOut(duration: 0.18)) {
                                     selectedPlan = plan
                                 }
+                            } label: {
+                                PaywallPlanCard(
+                                    plan: plan,
+                                    subtitle: storeKitManager.priceText(
+                                        for: plan.productID,
+                                        periodSuffix: plan.periodSuffix
+                                    ),
+                                    isSelected: selectedPlan == plan
+                                )
                             }
+                            .buttonStyle(.plain)
+                            .disabled(isStoreBusy || storeKitManager.productsByID[plan.productID] == nil)
+                            .accessibilityValue(selectedPlan == plan ? "Selected" : "")
+                            .accessibilityIdentifier("paywall.plan.\(plan.productID)")
                         }
                     }
                     .padding(.horizontal, 18)
@@ -78,37 +83,11 @@ struct PaywallView: View {
                     .foregroundStyle(Color(hex: "FF0A3D"))
                     .padding(.top, 12)
 
-                    Button {
-                        Task {
-                            let success = await storeKitManager.purchase(productID: selectedPlan.productID)
-                            if success {
-                                hasUnlockedPro = true
-                                onContinue()
-                            } else if let message = storeKitManager.latestErrorMessage {
-                                storeAlertMessage = message
-                                isStoreAlertPresented = true
-                            }
-                        }
-                    } label: {
-                        Text("Continue")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color(hex: "FF2450"), Color(hex: "FF002B")],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .clipShape(Capsule())
-                            .shadow(color: Color(hex: "FF0A3D").opacity(0.25), radius: 8, y: 3)
-                    }
-                    .disabled(storeKitManager.isLoadingProducts || storeKitManager.isPurchasing || storeKitManager.isRestoring)
-                    .opacity((storeKitManager.isLoadingProducts || storeKitManager.isPurchasing || storeKitManager.isRestoring) ? 0.8 : 1)
-                    .padding(.horizontal, 26)
-                    .padding(.top, 14)
+                    purchaseButton
+                        .padding(.horizontal, 26)
+                        .padding(.top, 14)
+
+                    productLoadingError
 
                     HStack(spacing: 28) {
                         Button("Privacy Policy") {
@@ -130,6 +109,7 @@ struct PaywallView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .disabled(storeKitManager.isPurchasing || storeKitManager.isRestoring)
                         Button("Terms of Use") {
                             openURL(AppConstants.Links.termsOfUse)
                         }
@@ -144,11 +124,14 @@ struct PaywallView: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottom)
             .clipped()
-      
+
             .background(Color(hex: "F2F3F5").ignoresSafeArea())
             .task {
                 await storeKitManager.loadProductsIfNeeded()
                 await storeKitManager.refreshEntitlementStatus()
+            }
+            .onChange(of: storeKitManager.productsByID.keys.sorted(), initial: true) { _, _ in
+                selectAvailablePlan()
             }
             .alert("Store", isPresented: $isStoreAlertPresented) {
                 Button("OK", role: .cancel) {}
@@ -157,6 +140,99 @@ struct PaywallView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
+    }
+
+    private var isStoreBusy: Bool {
+        storeKitManager.isLoadingProducts || storeKitManager.isPurchasing || storeKitManager.isRestoring
+    }
+
+    private var isSelectedPlanAvailable: Bool {
+        storeKitManager.productsByID[selectedPlan.productID] != nil
+    }
+
+    private var purchaseButtonTitle: String {
+        if storeKitManager.isPurchasing { return "Waiting for App Store…" }
+        if storeKitManager.isRestoring { return "Restoring purchases…" }
+        if storeKitManager.isLoadingProducts { return "Loading plans…" }
+        return isSelectedPlanAvailable ? "Continue" : "Retry loading plans"
+    }
+
+    private var purchaseButton: some View {
+        Button {
+            let productID = selectedPlan.productID
+            Task {
+                guard storeKitManager.productsByID[productID] != nil else {
+                    await storeKitManager.loadProducts()
+                    return
+                }
+                let success = await storeKitManager.purchase(productID: productID)
+                if success {
+                    hasUnlockedPro = true
+                    onContinue()
+                } else if let message = storeKitManager.latestErrorMessage {
+                    storeAlertMessage = message
+                    isStoreAlertPresented = true
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                if isStoreBusy {
+                    ProgressView()
+                        .tint(.white)
+                }
+                Text(purchaseButtonTitle)
+                    .font(.system(size: 17, weight: .bold))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: "FF2450"), Color(hex: "FF002B")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .clipShape(Capsule())
+            .shadow(color: Color(hex: "FF0A3D").opacity(0.25), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+        .disabled(storeKitManager.isLoadingProducts || storeKitManager.isPurchasing || storeKitManager.isRestoring)
+        .accessibilityIdentifier("paywall.continue")
+    }
+
+    @ViewBuilder
+    private var productLoadingError: some View {
+        if let message = storeKitManager.productLoadErrorMessage {
+            VStack(spacing: 4) {
+                Text(message)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(hex: "FF0A3D"))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("paywall.productsError")
+
+                if isSelectedPlanAvailable {
+                    Button("Retry loading plans") {
+                        Task { await storeKitManager.loadProducts() }
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .disabled(isStoreBusy)
+                    .accessibilityIdentifier("paywall.retry")
+                }
+            }
+            .padding(.horizontal, 26)
+            .padding(.top, 8)
+        }
+    }
+
+    private func selectAvailablePlan() {
+        guard !isSelectedPlanAvailable else { return }
+        if let plan = [SubscriptionPlan.yearly, .monthly, .weekly].first(where: {
+            storeKitManager.productsByID[$0.productID] != nil
+        }) {
+            selectedPlan = plan
+        }
     }
 }
 
@@ -167,45 +243,6 @@ private struct PaywallHeroView: View {
             .scaledToFill()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .clipped()
-    }
-}
-
-private struct NotificationBannerMock: View {
-    var body: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(Color(hex: "DBE0E8").opacity(0.96))
-            .frame(width: 348, height: 66)
-            .overlay(alignment: .leading) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack {
-                        Text("PILL REMINDER")
-                            .font(.system(size: 8, weight: .medium))
-                            .foregroundStyle(Color(hex: "6B7383"))
-                        Spacer()
-                        Text("1m ago")
-                            .font(.system(size: 8, weight: .medium))
-                            .foregroundStyle(Color(hex: "7A8393"))
-                    }
-                    Text("Medicine Reminder")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color(hex: "2D3440"))
-                    Text("Time to take: Aspirin")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color(hex: "39404D"))
-                }
-                .padding(.horizontal, 12)
-            }
-            .overlay(alignment: .leading) {
-                ZStack {
-                    Circle().fill(Color(hex: "FF0A3D"))
-                    Image(systemName: "pills.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 14, height: 14)
-                .padding(.leading, 6)
-                .padding(.top, 6)
-            }
     }
 }
 
@@ -289,9 +326,4 @@ private enum SubscriptionPlan: CaseIterable {
         }
     }
 
-}
-
-#Preview("Paywall") {
-    PaywallView(onContinue: {}, onSkip: {})
-        .environmentObject(StoreKitManager())
 }

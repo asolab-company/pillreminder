@@ -205,14 +205,3 @@ struct MainCalendarPickerOverlay: View {
         "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT",
     ]
 }
-
-#Preview("Main Calendar Overlay") {
-    ZStack {
-        Color.gray.opacity(0.2).ignoresSafeArea()
-        MainCalendarPickerOverlay(
-            initialDate: Date(),
-            onClose: {},
-            onApply: { _ in }
-        )
-    }
-}

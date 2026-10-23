@@ -101,14 +101,3 @@ struct AddMedicineTimePickerOverlay: View {
         .frame(maxWidth: 560)
     }
 }
-
-#Preview("Add Medicine Time Overlay") {
-    ZStack {
-        Color.gray.opacity(0.2).ignoresSafeArea()
-        AddMedicineTimePickerOverlay(
-            initialDate: Date(),
-            onClose: {},
-            onApply: { _ in }
-        )
-    }
-}

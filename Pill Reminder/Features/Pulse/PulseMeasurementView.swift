@@ -205,12 +205,10 @@ struct PulseMeasurementView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-      
 
                 Image("app_ic_empty_clock")
                     .font(.system(size: emptyStateImageSize * 0.62, weight: .ultraLight))
                     .foregroundStyle(Color(hex: "D9DDE3"))
-            
 
             Text("No measurements yet")
                 .font(.system(size: 14, weight: .regular))
@@ -227,12 +225,10 @@ struct PulseMeasurementView: View {
                     if !deviceSize.isExtraSmallDevice {
                         Spacer()
                     }
-               
-                
+
                         Image("app_ic_idea")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(.white)
-                    
 
                     Text("Swipe left to delete Measurement")
                         .font(.system(size: 14, weight: .medium))
@@ -1488,129 +1484,4 @@ nonisolated final class PulseCameraPulseReader: NSObject, ObservableObject, AVCa
         )
     }
 
-
-}
-
-#Preview("Pulse Empty") {
-    PulseMeasurementView(
-        entries: [],
-        onStartMeasurement: {},
-        onDelete: { _ in }
-    )
-}
-
-#Preview("Pulse Filled") {
-    PulseMeasurementView(
-        entries: [
-            PulseMeasurementEntry(bpm: 78, measuredAt: Date()),
-            PulseMeasurementEntry(bpm: 74, measuredAt: Date().addingTimeInterval(-86400)),
-            PulseMeasurementEntry(bpm: 62, measuredAt: Date().addingTimeInterval(-172800)),
-            PulseMeasurementEntry(bpm: 90, measuredAt: Date().addingTimeInterval(-259200)),
-            PulseMeasurementEntry(bpm: 112, measuredAt: Date().addingTimeInterval(-345600)),
-        ],
-        onStartMeasurement: {},
-        onDelete: { _ in }
-    )
-}
-
-#Preview("Pulse Reader - Preparing") {
-    PulseReaderContent(
-        snapshot: PulseReaderSnapshot(
-            phase: .preparing,
-            progress: 0,
-            estimatedBPM: nil,
-            signalQuality: 0,
-            statusText: "Cover rear camera",
-            title: "Preparing",
-            message: "Get ready…\nCover the rear camera next to the flash."
-        ),
-        onBack: {},
-        onAction: {},
-        onMenu: {}
-    )
-}
-
-#Preview("Pulse Reader - Measuring") {
-    PulseReaderContent(
-        snapshot: PulseReaderSnapshot(
-            phase: .measuring,
-            progress: 0.42,
-            estimatedBPM: 76,
-            signalQuality: 0.68,
-            statusText: "Hold still",
-            title: "Measuring",
-            message: "Measuring your pulse...\nPlease stay still."
-        ),
-        onBack: {},
-        onAction: {},
-        onMenu: {}
-    )
-}
-
-#Preview("Pulse Reader - Measuring 88%") {
-    PulseReaderContent(
-        snapshot: PulseReaderSnapshot(
-            phase: .measuring,
-            progress: 0.88,
-            estimatedBPM: 78,
-            signalQuality: 0.82,
-            statusText: "Hold still",
-            title: "Measuring",
-            message: "Measuring your pulse...\nPlease stay still."
-        ),
-        onBack: {},
-        onAction: {},
-        onMenu: {}
-    )
-}
-
-#Preview("Pulse Reader - Completed") {
-    PulseReaderContent(
-        snapshot: PulseReaderSnapshot(
-            phase: .completed,
-            progress: 1,
-            estimatedBPM: 78,
-            signalQuality: 0.84,
-            statusText: "Good signal",
-            title: "78 BPM",
-            message: "Measurement saved."
-        ),
-        onBack: {},
-        onAction: {},
-        onMenu: {}
-    )
-}
-
-#Preview("Pulse Reader - Error") {
-    PulseReaderContent(
-        snapshot: PulseReaderSnapshot(
-            phase: .failed,
-            progress: 0,
-            estimatedBPM: nil,
-            signalQuality: 0.18,
-            statusText: "Poor signal",
-            title: "Error",
-            message: "We couldn’t detect your pulse.\nMake sure your finger fully covers the camera and try again."
-        ),
-        onBack: {},
-        onAction: {},
-        onMenu: {}
-    )
-}
-
-#Preview("Pulse Reader - Permission") {
-    PulseReaderContent(
-        snapshot: PulseReaderSnapshot(
-            phase: .permissionDenied,
-            progress: 0,
-            estimatedBPM: nil,
-            signalQuality: 0,
-            statusText: "Camera access needed",
-            title: "Camera Access Needed",
-            message: "Allow camera access to measure your pulse."
-        ),
-        onBack: {},
-        onAction: {},
-        onMenu: {}
-    )
 }

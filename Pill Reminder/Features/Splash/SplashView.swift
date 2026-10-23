@@ -35,7 +35,3 @@ struct AnimatedLaunchSplashView: View {
         }
     }
 }
-
-#Preview("Splash") {
-    AnimatedLaunchSplashView(onFinish: {})
-}

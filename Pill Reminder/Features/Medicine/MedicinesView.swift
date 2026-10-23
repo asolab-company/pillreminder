@@ -190,16 +190,3 @@ private enum MedicineStatus {
         }
     }
 }
-
-#Preview("Medicines Empty") {
-    MedicinesView(medications: [])
-}
-
-#Preview("Medicines Filled") {
-    MedicinesView(
-        medications: [
-            Medication(name: "Aspirin", dosage: "100mg", startDate: Date(), durationDays: 7, intervalMinutes: 720),
-            Medication(name: "Vitamin D", dosage: "2000 IU", startDate: Date(), durationDays: 30, intervalMinutes: 1440)
-        ]
-    )
-}

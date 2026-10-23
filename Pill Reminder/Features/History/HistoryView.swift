@@ -132,32 +132,3 @@ private struct HistoryRow: View {
         return formatter
     }()
 }
-
-#Preview("History Empty") {
-    HistoryView(entries: [])
-}
-
-#Preview("History Filled") {
-    HistoryView(
-        entries: [
-            HistoryTakenEntry(
-                id: "1",
-                medicationName: "Aspirin",
-                dosage: "100mg",
-                takenAt: Date(),
-                checkColor: Color(hex: "FF0A3D")
-            ),
-            HistoryTakenEntry(
-                id: "2",
-                medicationName: "Omeprazole",
-                dosage: "100mg",
-                takenAt: Date().addingTimeInterval(-86400),
-                checkColor: Color(hex: "F4B400")
-            )
-        ]
-    )
-}
-
-#Preview("History") {
-    HistoryView(entries: [])
-}

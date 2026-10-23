@@ -23,10 +23,3 @@ extension Color {
         )
     }
 }
-
-#Preview("Color Hex") {
-    RoundedRectangle(cornerRadius: 16, style: .continuous)
-        .fill(Color(hex: "FF0A3D"))
-        .frame(width: 180, height: 120)
-        .padding()
-}

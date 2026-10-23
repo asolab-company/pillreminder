@@ -173,12 +173,11 @@ private struct ProVersionCard: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-         
+
                     Image("app_ic_crown")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 58, height: 58)
-            
 
                 Text("PRO Version")
                     .font(.system(size: 24, weight: .bold))
@@ -265,10 +264,4 @@ private struct SettingsActionRowLabel: View {
             .frame(height: 66)
             .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
     }
-}
-
-#Preview("Settings") {
-    SettingsView()
-        .environmentObject(StoreKitManager())
-        .modelContainer(for: Medication.self, inMemory: true)
 }

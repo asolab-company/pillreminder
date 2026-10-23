@@ -88,7 +88,7 @@ struct MainMedicationCardView: View {
                             .buttonStyle(.plain)
                         }    .padding(.top,7)
                     }
-                    
+
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 12)
@@ -147,33 +147,4 @@ struct MainMedicationCardView: View {
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
-}
-
-#Preview("Main Medication Card") {
-    let medication = Medication(
-        name: "Aspirin",
-        dosage: "100mg",
-        startDate: Date(),
-        durationDays: 7
-    )
-
-    return VStack(spacing: 12) {
-        MainMedicationCardView(
-            medication: medication,
-            scheduledDate: Date().addingTimeInterval(-25 * 60),
-            displayState: .overdue(minutes: 25),
-            onMarkMissed: {},
-            onMarkTaken: {}
-        )
-
-        MainMedicationCardView(
-            medication: medication,
-            scheduledDate: Date().addingTimeInterval(12 * 60),
-            displayState: .upcoming(minutes: 12),
-            onMarkMissed: {},
-            onMarkTaken: {}
-        )
-    }
-    .padding()
-    .background(Color(hex: "F2F3F5"))
 }

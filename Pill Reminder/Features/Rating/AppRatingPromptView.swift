@@ -108,7 +108,3 @@ struct AppRatingPromptView: View {
         }
     }
 }
-
-#Preview("Rating Prompt") {
-    AppRatingPromptView(onClose: {}, onSubmit: { _ in })
-}

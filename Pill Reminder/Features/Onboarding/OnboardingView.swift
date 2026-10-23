@@ -20,7 +20,7 @@ struct OnboardingView: View {
             heroImageName: "app_bg_onbording_1",
             showsLegal: true
         ),
-     
+
         OnboardingPage(
             titleLine1: "Timely",
             titleLine2: "Reminders",
@@ -219,8 +219,4 @@ struct OnboardingPage {
     let subtitle: String
     let heroImageName: String
     let showsLegal: Bool
-}
-
-#Preview("Onboarding") {
-    OnboardingView(onFinish: {})
 }
