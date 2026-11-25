@@ -68,21 +68,6 @@ final class MedicationReminderScheduler {
         }
     }
 
-    func requestAuthorizationIfNeeded() async -> Bool {
-        let settings = await notificationSettings()
-
-        switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
-            return true
-        case .notDetermined:
-            return await requestAuthorization()
-        case .denied:
-            return false
-        @unknown default:
-            return false
-        }
-    }
-
     func removeAllMedicationRequests() async {
         let pending = await pendingRequests()
         let pendingIDs = pending.map(\.identifier).filter {
@@ -212,10 +197,6 @@ final class MedicationReminderScheduler {
         @unknown default:
             return false
         }
-    }
-
-    private func requestAuthorization() async -> Bool {
-        (try? await center.requestAuthorization(options: [.alert, .badge, .sound])) ?? false
     }
 
     private func notificationSettings() async -> UNNotificationSettings {

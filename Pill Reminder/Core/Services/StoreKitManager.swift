@@ -4,8 +4,6 @@ import StoreKit
 
 @MainActor
 final class StoreKitManager: ObservableObject {
-    private static let legacyPremiumFlagKey = "pill_reminder_web_premium_unlocked"
-
     @Published private(set) var productsByID: [String: Product] = [:]
     @Published private(set) var hasActiveSubscription = false
     @Published private(set) var isLoadingProducts = false
@@ -15,6 +13,8 @@ final class StoreKitManager: ObservableObject {
     @Published var latestErrorMessage: String?
 
     private var didLoadProducts = false
+    private var entitlementRefresh = 0
+    private var reportingTransactions: Set<UInt64> = []
     private var transactionUpdatesTask: Task<Void, Never>?
     private let productLoadTimeout: Duration
     private var productRequestID: UUID?
@@ -50,16 +50,13 @@ final class StoreKitManager: ObservableObject {
             let products = try await requestProductsWithTimeout()
             try Task.checkCancellation()
             productsByID = Dictionary(uniqueKeysWithValues: products.map { ($0.id, $0) })
-            let missingIDs = Set(AppConstants.Store.productIDs).subtracting(productsByID.keys)
-            didLoadProducts = missingIDs.isEmpty
+            didLoadProducts = !products.isEmpty
 
-            if !missingIDs.isEmpty {
-                productLoadErrorMessage = products.isEmpty
-                    ? "Subscriptions are unavailable right now. Please try again."
-                    : "Some plans are unavailable. Choose an available plan or try again."
+            if products.isEmpty {
+                productLoadErrorMessage = "Subscriptions are unavailable right now. Please try again."
             }
         } catch is CancellationError {
-
+            return
         } catch ProductLoadError.timedOut {
             productLoadErrorMessage = "Loading subscriptions took too long. Check your connection and try again."
         } catch {
@@ -119,14 +116,6 @@ final class StoreKitManager: ObservableObject {
         case timedOut
     }
 
-    func priceText(for productID: String, periodSuffix: String) -> String {
-        guard let product = productsByID[productID] else {
-            return isLoadingProducts ? "Loading…" : "Unavailable"
-        }
-
-        return "\(product.displayPrice) / \(periodSuffix)"
-    }
-
     func purchase(productID: String) async -> Bool {
         guard !isPurchasing, !isRestoring else { return false }
         latestErrorMessage = nil
@@ -136,6 +125,7 @@ final class StoreKitManager: ObservableObject {
         }
         isPurchasing = true
         defer { isPurchasing = false }
+        var attempt: UUID?
 
         do {
             if productsByID[productID] == nil {
@@ -147,32 +137,41 @@ final class StoreKitManager: ObservableObject {
                 return false
             }
 
+            PulseAnalytics.shared.track("purchase_started", productID: productID)
+            attempt = MetaAppEvents.shared.beginPurchase(productID)
             let result = try await product.purchase()
 
             switch result {
             case .success(let verification):
                 guard case .verified(let transaction) = verification else {
+                    MetaAppEvents.shared.cancel(attempt)
                     latestErrorMessage = "Purchase verification failed."
                     return false
                 }
 
-                await transaction.finish()
+                MetaAppEvents.shared.process(transaction, attempt: attempt)
                 await refreshEntitlementStatus()
-                AppsFlyerService.shared.trackSubscription(productID: productID)
+                Task { await reportAndFinish(verification) }
+                PulseAnalytics.shared.track("purchase_verified", productID: productID)
                 return hasActiveSubscription
 
             case .pending:
+                PulseAnalytics.shared.track("purchase_pending", productID: productID)
                 latestErrorMessage = "Purchase is pending approval."
                 return false
 
             case .userCancelled:
+                MetaAppEvents.shared.cancel(attempt)
+                PulseAnalytics.shared.track("purchase_cancelled", productID: productID)
                 return false
 
             @unknown default:
+                MetaAppEvents.shared.cancel(attempt)
                 latestErrorMessage = "Unknown purchase state."
                 return false
             }
         } catch {
+            MetaAppEvents.shared.cancel(attempt)
             latestErrorMessage = "Purchase failed. Please try again."
             return false
         }
@@ -190,6 +189,15 @@ final class StoreKitManager: ObservableObject {
 
             if !hasActiveSubscription {
                 latestErrorMessage = "No active purchases were found."
+            } else {
+                PulseAnalytics.shared.track("purchases_restored")
+                Task {
+                    for await result in Transaction.currentEntitlements {
+                        if case .verified(let transaction) = result, AppConstants.Store.productIDs.contains(transaction.productID) {
+                            await reportAndFinish(result)
+                        }
+                    }
+                }
             }
 
             return hasActiveSubscription
@@ -200,34 +208,44 @@ final class StoreKitManager: ObservableObject {
     }
 
     func refreshEntitlementStatus() async {
-        var isUnlocked = false
+        entitlementRefresh += 1
+        let refresh = entitlementRefresh
+        var activeTransaction: Transaction?
 
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
             guard AppConstants.Store.productIDs.contains(transaction.productID) else { continue }
-            guard transaction.revocationDate == nil else { continue }
+            guard transaction.productType == .autoRenewable, !transaction.isUpgraded, transaction.revocationDate == nil else { continue }
 
-            if let expirationDate = transaction.expirationDate, expirationDate < Date() {
-                continue
-            }
-
-            isUnlocked = true
+            activeTransaction = transaction
             break
         }
 
-        hasActiveSubscription = isUnlocked || hasLegacyPremiumAccess()
+        guard refresh == entitlementRefresh else { return }
+        hasActiveSubscription = activeTransaction != nil
     }
 
-    private func hasLegacyPremiumAccess() -> Bool {
-        UserDefaults.standard.bool(forKey: Self.legacyPremiumFlagKey)
+    func retryUnfinishedTransactions() async {
+        for await result in Transaction.unfinished {
+            if case .verified(let transaction) = result { MetaAppEvents.shared.process(transaction) }
+            await reportAndFinish(result)
+        }
+    }
+
+    private func reportAndFinish(_ result: VerificationResult<Transaction>) async {
+        guard case .verified(let transaction) = result, AppConstants.Store.productIDs.contains(transaction.productID),
+              reportingTransactions.insert(transaction.id).inserted else { return }
+        defer { reportingTransactions.remove(transaction.id) }
+        if await PulseAnalytics.shared.report(result) { await transaction.finish() }
     }
 
     private func observeTransactionUpdates() -> Task<Void, Never> {
         Task(priority: .background) { [weak self] in
             for await result in Transaction.updates {
-                guard case .verified(let transaction) = result else { continue }
-                await transaction.finish()
+                guard case .verified(let transaction) = result, AppConstants.Store.productIDs.contains(transaction.productID) else { continue }
+                MetaAppEvents.shared.process(transaction)
                 await self?.refreshEntitlementStatus()
+                Task { [weak self] in await self?.reportAndFinish(result) }
             }
         }
     }

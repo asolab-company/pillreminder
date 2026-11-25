@@ -1,329 +1,218 @@
+import StoreKit
 import SwiftUI
 
 struct PaywallView: View {
-    @Environment(\.openURL) private var openURL
-    @EnvironmentObject private var storeKitManager: StoreKitManager
-    @AppStorage("hasUnlockedPro") private var hasUnlockedPro = false
-
-    @State private var selectedPlan: SubscriptionPlan = .yearly
-    @State private var isStoreAlertPresented = false
-    @State private var storeAlertMessage = ""
-
+    @EnvironmentObject private var store: StoreKitManager
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var selectedID = AppConstants.Store.weeklyProductID
+    @State private var trialProductID: String?
+    @State private var trialTitle = ""
+    @State private var alertMessage: String?
+    @State private var completed = false
     let onContinue: () -> Void
     let onSkip: () -> Void
 
+    private var selectedProduct: Product? { store.productsByID[selectedID] }
+    private var hasTrial: Bool { selectedProduct != nil && trialProductID == selectedID }
+    private var busy: Bool { store.isPurchasing || store.isRestoring || store.isLoadingProducts }
+    private var availableIDs: [String] { AppConstants.Store.productIDs.filter { store.productsByID[$0] != nil } }
+
     var body: some View {
         GeometryReader { proxy in
-            let topInset = proxy.safeAreaInsets.top
-            let longestSide = max(proxy.size.width, proxy.size.height)
-            let isSEDevice = longestSide <= 667
-            let titleSize: CGFloat = isSEDevice ? 30 : 36
-            let subtitleSize: CGFloat = isSEDevice ? 14 : 15
-
+            let tight = proxy.size.height < 720
+            let heroHeight = min(306, max(155, proxy.size.height * (tight ? 0.29 : 0.32)))
             VStack(spacing: 0) {
-                PaywallHeroView()
-                    .frame(width: proxy.size.width)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-                    .offset(y: -topInset)
-                    .padding(.bottom, -topInset)
+                ScrollView {
+                    VStack(spacing: tight ? 11 : 16) {
+                        PulsePaywallHero(contentHeight: heroHeight, topInset: proxy.safeAreaInsets.top)
+                        VStack(spacing: 7) {
+                            VStack(spacing: 0) {
+                                Text("Track Your Pulse.").foregroundStyle(PulseStyle.accent)
+                                Text("Know Your Heart.").foregroundStyle(PulseStyle.secondary)
+                            }
+                            .font(tight ? .title.bold() : .largeTitle.bold())
+                            .accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
+                            Text("Check your pulse, follow your trends and share your readings with your doctor.")
+                                .font(.subheadline).frame(maxWidth: 390)
+                        }
+                        .multilineTextAlignment(.center).padding(.horizontal, 20)
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
+                            feature("Instant pulse", "Measure your heart rate with the camera.", icon: "heart.text.square")
+                            feature("Trends & history", "See how your pulse changes over time.", icon: "chart.xyaxis.line")
+                            feature("Pulse reports", "Share your readings as a PDF or CSV.", icon: "doc.text")
+                            offer
+                        }
+                        .padding(.horizontal, 18)
+                        if let message = store.productLoadErrorMessage {
+                            Text(message).font(.footnote).foregroundStyle(PulseStyle.secondary)
+                                .multilineTextAlignment(.center).padding(.horizontal, 20)
+                                .accessibilityIdentifier("paywall.productsError")
+                        }
+                    }
+                    .frame(maxWidth: 570).frame(maxWidth: .infinity).padding(.bottom, 10)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .ignoresSafeArea(.container, edges: .top)
+                footer
+            }
+        }
+        .foregroundStyle(PulseStyle.primaryText)
+        .background(PulseStyle.background.ignoresSafeArea())
+        .task { await store.loadProductsIfNeeded() }
+        .onAppear { PulseAnalytics.shared.track("paywall_viewed") }
+        .onChange(of: availableIDs, initial: true) { _, ids in
+            if !ids.contains(selectedID), let first = ids.first { selectedID = first }
+        }
+        .task(id: selectedProduct?.id) {
+            trialProductID = nil
+            guard let product = selectedProduct, let subscription = product.subscription,
+                  let intro = subscription.introductoryOffer, intro.paymentMode == .freeTrial,
+                  await subscription.isEligibleForIntroOffer, !Task.isCancelled else { return }
+            trialTitle = "\(intro.period.value * intro.periodCount)-\(unit(intro.period.unit)) free trial"
+            trialProductID = product.id
+        }
+        .onChange(of: store.hasActiveSubscription) { _, active in if active { finish() } }
+        .alert("Store", isPresented: Binding(get: { alertMessage != nil }, set: { if !$0 { alertMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(alertMessage ?? "") }
+    }
 
-                VStack(spacing: 0) {
-                    Text("Stay Consistent.")
-                        .font(.system(size: titleSize, weight: .heavy))
-                        .foregroundStyle(Color(hex: "FF0A3D"))
-                        .padding(.top, isSEDevice ? 8 : 14)
-
-                    Text("Stay Healthy.")
-                        .font(.system(size: titleSize, weight: .heavy))
-                        .foregroundStyle(Color(hex: "687286"))
-
-                    Text("Unlock full medication tracking, smart reminders,\nand a complete history of your doses.")
-                        .font(.system(size: subtitleSize, weight: .regular))
-                        .foregroundStyle(Color(hex: "3B4353"))
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(1)
-
-                        .fixedSize(horizontal: false, vertical: true)
-                        .layoutPriority(2)
-                        .padding(.top, 12)
-                        .padding(.horizontal, 26)
-
-                    VStack(spacing: 10) {
-                        ForEach(SubscriptionPlan.allCases, id: \.self) { plan in
+    private var offer: some View {
+        let name = hasTrial ? trialTitle : planName(selectedID)
+        let price = selectedProduct.map { (hasTrial ? "Then " : "") + billing(for: $0) }
+            ?? (store.isLoadingProducts ? "Loading price…" : "Price unavailable")
+        return Group {
+            if availableIDs.count > 1 {
+                Menu {
+                    ForEach(availableIDs, id: \.self) { id in
+                        if let product = store.productsByID[id] {
                             Button {
-                                withAnimation(.easeOut(duration: 0.18)) {
-                                    selectedPlan = plan
-                                }
+                                selectedID = id
                             } label: {
-                                PaywallPlanCard(
-                                    plan: plan,
-                                    subtitle: storeKitManager.priceText(
-                                        for: plan.productID,
-                                        periodSuffix: plan.periodSuffix
-                                    ),
-                                    isSelected: selectedPlan == plan
-                                )
+                                let label = "\(planName(id)) · \(billing(for: product))"
+                                if id == selectedID { Label(label, systemImage: "checkmark") }
+                                else { Text(label) }
                             }
-                            .buttonStyle(.plain)
-                            .disabled(isStoreBusy || storeKitManager.productsByID[plan.productID] == nil)
-                            .accessibilityValue(selectedPlan == plan ? "Selected" : "")
-                            .accessibilityIdentifier("paywall.plan.\(plan.productID)")
+                            .accessibilityIdentifier("paywall.plan.\(id)")
                         }
                     }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 16)
-
-                    HStack(alignment: .center, spacing: 8) {
-                        Image(systemName: "applelogo")
-                            .font(.system(size: 18, weight: .semibold))
-                        Text("Cancel Anytime")
-                            .font(.system(size: 12, weight: .bold))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .foregroundStyle(Color(hex: "FF0A3D"))
-                    .padding(.top, 12)
-
-                    purchaseButton
-                        .padding(.horizontal, 26)
-                        .padding(.top, 14)
-
-                    productLoadingError
-
-                    HStack(spacing: 28) {
-                        Button("Privacy Policy") {
-                            openURL(AppConstants.Links.privacyPolicy)
-                        }
-                        .buttonStyle(.plain)
-                        Button("Skip", action: onSkip)
-                            .buttonStyle(.plain)
-                        Button("Restore") {
-                            Task {
-                                let success = await storeKitManager.restorePurchases()
-                                if success {
-                                    hasUnlockedPro = true
-                                    onContinue()
-                                } else if let message = storeKitManager.latestErrorMessage {
-                                    storeAlertMessage = message
-                                    isStoreAlertPresented = true
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(storeKitManager.isPurchasing || storeKitManager.isRestoring)
-                        Button("Terms of Use") {
-                            openURL(AppConstants.Links.termsOfUse)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color(hex: "A5ADBA"))
-                    .padding(.top, 15)
-                    .padding(.bottom,5)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottom)
-            .clipped()
-
-            .background(Color(hex: "F2F3F5").ignoresSafeArea())
-            .task {
-                await storeKitManager.loadProductsIfNeeded()
-                await storeKitManager.refreshEntitlementStatus()
-            }
-            .onChange(of: storeKitManager.productsByID.keys.sorted(), initial: true) { _, _ in
-                selectAvailablePlan()
-            }
-            .alert("Store", isPresented: $isStoreAlertPresented) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(storeAlertMessage)
+                } label: { feature(name, price, icon: "calendar", isOffer: true, canChoose: true) }
+                .accessibilityHint("Choose a subscription plan")
+            } else {
+                feature(name, price, icon: "calendar", isOffer: true)
             }
         }
-        .ignoresSafeArea(edges: .top)
+        .buttonStyle(.plain).accessibilityIdentifier("paywall.offer")
     }
 
-    private var isStoreBusy: Bool {
-        storeKitManager.isLoadingProducts || storeKitManager.isPurchasing || storeKitManager.isRestoring
+    private func feature(_ title: String, _ detail: String, icon: String, isOffer: Bool = false, canChoose: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 7) {
+                Image(systemName: icon).font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PulseStyle.accent)
+                    .frame(width: 29, height: 29).background(PulseStyle.accentTint, in: Circle())
+                    .accessibilityHidden(true)
+                Text(title).font(.subheadline.bold()).fixedSize(horizontal: false, vertical: true)
+                if canChoose { Image(systemName: "chevron.down").font(.caption2).accessibilityHidden(true) }
+            }
+            Text(detail).font(.footnote).foregroundStyle(PulseStyle.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12).frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
+        .background(.white, in: RoundedRectangle(cornerRadius: 21))
+        .shadow(color: isOffer ? PulseStyle.accent.opacity(0.16) : .black.opacity(0.045), radius: isOffer ? 9 : 5, y: 3)
+        .accessibilityElement(children: .combine)
     }
 
-    private var isSelectedPlanAvailable: Bool {
-        storeKitManager.productsByID[selectedPlan.productID] != nil
+    private var footer: some View {
+        VStack(spacing: 4) {
+            Label("Cancel anytime", systemImage: "checkmark.circle").font(.footnote.bold()).foregroundStyle(PulseStyle.accent)
+            Button {
+                Task {
+                    if selectedProduct == nil {
+                        await store.loadProducts()
+                    } else if await store.purchase(productID: selectedID) {
+                        finish()
+                    } else {
+                        alertMessage = store.latestErrorMessage
+                    }
+                }
+            } label: {
+                HStack(spacing: 7) {
+                    if busy { ProgressView().tint(.white) }
+                    Text(actionTitle)
+                }
+            }
+            .buttonStyle(PulsePrimaryButton()).disabled(busy)
+            .accessibilityIdentifier("paywall.continue")
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 0) { legalActions }
+                VStack(spacing: 0) { legalActions }
+            }
+            .font(.caption.weight(.medium)).foregroundStyle(PulseStyle.secondary)
+        }
+        .frame(maxWidth: 500)
+        .padding(.top, 5).padding(.horizontal, 18)
     }
 
-    private var purchaseButtonTitle: String {
-        if storeKitManager.isPurchasing { return "Waiting for App Store…" }
-        if storeKitManager.isRestoring { return "Restoring purchases…" }
-        if storeKitManager.isLoadingProducts { return "Loading plans…" }
-        return isSelectedPlanAvailable ? "Continue" : "Retry loading plans"
-    }
-
-    private var purchaseButton: some View {
+    @ViewBuilder private var legalActions: some View {
+        Link(destination: AppConstants.Links.privacyPolicy) { legalLabel("Privacy Policy") }
         Button {
-            let productID = selectedPlan.productID
+            PulseAnalytics.shared.track("paywall_skipped")
+            onSkip()
+        } label: { legalLabel("Skip") }
+        .disabled(store.isPurchasing || store.isRestoring)
+        Button {
             Task {
-                guard storeKitManager.productsByID[productID] != nil else {
-                    await storeKitManager.loadProducts()
-                    return
-                }
-                let success = await storeKitManager.purchase(productID: productID)
-                if success {
-                    hasUnlockedPro = true
-                    onContinue()
-                } else if let message = storeKitManager.latestErrorMessage {
-                    storeAlertMessage = message
-                    isStoreAlertPresented = true
-                }
+                if await store.restorePurchases() { finish() }
+                else { alertMessage = store.latestErrorMessage }
             }
-        } label: {
-            HStack(spacing: 8) {
-                if isStoreBusy {
-                    ProgressView()
-                        .tint(.white)
-                }
-                Text(purchaseButtonTitle)
-                    .font(.system(size: 17, weight: .bold))
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .background(
-                LinearGradient(
-                    colors: [Color(hex: "FF2450"), Color(hex: "FF002B")],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .clipShape(Capsule())
-            .shadow(color: Color(hex: "FF0A3D").opacity(0.25), radius: 8, y: 3)
-        }
-        .buttonStyle(.plain)
-        .disabled(storeKitManager.isLoadingProducts || storeKitManager.isPurchasing || storeKitManager.isRestoring)
-        .accessibilityIdentifier("paywall.continue")
+        } label: { legalLabel("Restore") }
+        .disabled(store.isPurchasing || store.isRestoring)
+        Link(destination: AppConstants.Links.termsOfUse) { legalLabel("Terms of Use") }
     }
 
-    @ViewBuilder
-    private var productLoadingError: some View {
-        if let message = storeKitManager.productLoadErrorMessage {
-            VStack(spacing: 4) {
-                Text(message)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color(hex: "FF0A3D"))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("paywall.productsError")
+    private func legalLabel(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
+            .contentShape(.rect)
+    }
 
-                if isSelectedPlanAvailable {
-                    Button("Retry loading plans") {
-                        Task { await storeKitManager.loadProducts() }
-                    }
-                    .font(.system(size: 12, weight: .semibold))
-                    .disabled(isStoreBusy)
-                    .accessibilityIdentifier("paywall.retry")
-                }
-            }
-            .padding(.horizontal, 26)
-            .padding(.top, 8)
+    private var actionTitle: String {
+        if store.isPurchasing { return "Purchasing…" }
+        if store.isRestoring { return "Restoring…" }
+        if store.isLoadingProducts { return "Loading plans…" }
+        guard selectedProduct != nil else { return "Retry loading plans" }
+        return hasTrial ? "Start Free Trial" : "Subscribe"
+    }
+
+    private func finish() {
+        guard store.hasActiveSubscription, !completed else { return }
+        completed = true
+        onContinue()
+    }
+
+    private func planName(_ id: String) -> String {
+        switch id {
+        case AppConstants.Store.weeklyProductID: "Weekly plan"
+        case AppConstants.Store.monthlyProductID: "Monthly plan"
+        default: "Yearly plan"
         }
     }
 
-    private func selectAvailablePlan() {
-        guard !isSelectedPlanAvailable else { return }
-        if let plan = [SubscriptionPlan.yearly, .monthly, .weekly].first(where: {
-            storeKitManager.productsByID[$0.productID] != nil
-        }) {
-            selectedPlan = plan
+    private func billing(for product: Product) -> String {
+        guard let period = product.subscription?.subscriptionPeriod else { return product.displayPrice }
+        let name = unit(period.unit)
+        return period.value == 1 ? "\(product.displayPrice) per \(name)" : "\(product.displayPrice) every \(period.value) \(name)s"
+    }
+
+    private func unit(_ unit: Product.SubscriptionPeriod.Unit) -> String {
+        switch unit {
+        case .day: "day"
+        case .week: "week"
+        case .month: "month"
+        case .year: "year"
+        @unknown default: "period"
         }
     }
-}
-
-private struct PaywallHeroView: View {
-    var body: some View {
-        Image("app_bg_paywalls")
-            .resizable()
-            .scaledToFill()
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .clipped()
-    }
-}
-
-private struct PaywallPlanCard: View {
-    let plan: SubscriptionPlan
-    let subtitle: String
-    let isSelected: Bool
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 24, style: .continuous)
-            .fill(Color(hex: "F7F8FA"))
-            .frame(height: 60)
-            .overlay {
-                RoundedRectangle(cornerRadius: 23, style: .continuous)
-                    .stroke(isSelected ? Color(hex: "FF0A3D") : .clear, lineWidth: 2)
-            }
-            .overlay(alignment: .leading) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(plan.title)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Color(hex: "3C4350"))
-                    Text(subtitle)
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(Color(hex: "A4ACB8"))
-                }
-                .padding(.leading, 16)
-                .offset(y: 1)
-            }
-            .overlay(alignment: .trailing) {
-                if plan == .yearly {
-                    Capsule()
-                        .fill(isSelected ? Color(hex: "FF0A3D") : Color(hex: "FFCFDA"))
-                        .frame(width: 80, height: 24)
-                        .overlay(
-                            Text("BEST OFFER")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(.white)
-                        )
-                        .padding(.trailing, 14)
-                }
-            }
-            .shadow(color: Color.black.opacity(0.04), radius: 4, y: 1)
-    }
-}
-
-private enum SubscriptionPlan: CaseIterable {
-    case weekly
-    case monthly
-    case yearly
-
-    var productID: String {
-        switch self {
-        case .weekly:
-            return AppConstants.Store.weeklyProductID
-        case .monthly:
-            return AppConstants.Store.monthlyProductID
-        case .yearly:
-            return AppConstants.Store.yearlyProductID
-        }
-    }
-
-    var periodSuffix: String {
-        switch self {
-        case .weekly:
-            return "week"
-        case .monthly:
-            return "month"
-        case .yearly:
-            return "year"
-        }
-    }
-
-    var title: String {
-        switch self {
-        case .weekly:
-            return "Weekly Access"
-        case .monthly:
-            return "Monthly Access"
-        case .yearly:
-            return "Yearly Access"
-        }
-    }
-
 }

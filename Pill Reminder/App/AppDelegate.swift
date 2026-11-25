@@ -7,7 +7,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        AppsFlyerService.shared.configure(launchOptions: launchOptions)
+        MetaAppEvents.shared.configure(launchOptions: launchOptions)
+        Task { await PulseAnalytics.shared.activate() }
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         MedicationReminderScheduler.shared.configureCategories()

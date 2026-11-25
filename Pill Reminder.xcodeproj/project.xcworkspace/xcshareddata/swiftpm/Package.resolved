@@ -1,13 +1,49 @@
 {
-  "originHash" : "55df34735be77dde4d92b13fbd90e1b9ab472fa212519a415a896f5c0e895487",
+  "originHash" : "f3f119c52798b37a20a24b5bc7cbded32447afcba5da542a642b042706538a3b",
   "pins" : [
     {
-      "identity" : "appsflyerframework-static",
+      "identity" : "adaptysdk-ios",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/AppsFlyerSDK/AppsFlyerFramework-Static",
+      "location" : "https://github.com/adaptyteam/AdaptySDK-iOS.git",
       "state" : {
-        "revision" : "8b6482043dd132e1e505d761c99b3ca04d40d3dd",
-        "version" : "7.0.3"
+        "revision" : "c818575616deff84d8d8b1f3c62e6fa57163ebc0",
+        "version" : "4.4.1"
+      }
+    },
+    {
+      "identity" : "amplitude-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/Amplitude-Swift.git",
+      "state" : {
+        "revision" : "ee0ba03974247623572d26305c5093b918c72e1c",
+        "version" : "1.20.1"
+      }
+    },
+    {
+      "identity" : "amplitudecore-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/AmplitudeCore-Swift.git",
+      "state" : {
+        "revision" : "0d978cebcc9fa59831b0484c46f491d405f393b2",
+        "version" : "1.6.1"
+      }
+    },
+    {
+      "identity" : "analytics-connector-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/analytics-connector-ios.git",
+      "state" : {
+        "revision" : "6d1a5b9666192861342b70ea0b2274180a5e1d4f",
+        "version" : "1.3.3"
+      }
+    },
+    {
+      "identity" : "facebook-ios-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/facebook/facebook-ios-sdk.git",
+      "state" : {
+        "revision" : "7c3fb7856063fa1074d330616f4070f2ed10a49b",
+        "version" : "19.0.1"
       }
     }
   ],

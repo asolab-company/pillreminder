@@ -28,10 +28,4 @@ final class Medication {
         self.createdAt = createdAt
     }
 
-    func isScheduled(on day: Date, calendar: Calendar = .current) -> Bool {
-        let startOfDay = calendar.startOfDay(for: day)
-        let startBoundary = calendar.startOfDay(for: startDate)
-        let endBoundary = calendar.startOfDay(for: endDate)
-        return startOfDay >= startBoundary && startOfDay <= endBoundary
-    }
 }

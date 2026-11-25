@@ -7,10 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		8B624356C6C6034C91000F09 /* AppsFlyerLib-Static in Frameworks */ = {isa = PBXBuildFile; productRef = 62A6B63E0DEB9927D941C969 /* AppsFlyerLib-Static */; };
+		49B093210000000000000001 /* AmplitudeSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 49B093210000000000000003 /* AmplitudeSwift */; };
+		49B093210000000000000002 /* Adapty in Frameworks */ = {isa = PBXBuildFile; productRef = 49B093210000000000000004 /* Adapty */; };
+		8B624356C6C6034C91000F09 /* FacebookCore in Frameworks */ = {isa = PBXBuildFile; productRef = 62A6B63E0DEB9927D941C969 /* FacebookCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		920A00000000000000000001 /* Meta.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Meta.xcconfig; path = Configuration/Meta.xcconfig; sourceTree = "<group>"; };
+		920A00000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Configuration/Info.plist; sourceTree = "<group>"; };
 		9C22AB752F76836500C8339D /* Pill Reminder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Pill Reminder.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -27,7 +31,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8B624356C6C6034C91000F09 /* AppsFlyerLib-Static in Frameworks */,
+				8B624356C6C6034C91000F09 /* FacebookCore in Frameworks */,
+				49B093210000000000000001 /* AmplitudeSwift in Frameworks */,
+				49B093210000000000000002 /* Adapty in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -38,6 +44,8 @@
 			isa = PBXGroup;
 			children = (
 				9C22AB772F76836500C8339D /* Pill Reminder */,
+				920A00000000000000000001 /* Meta.xcconfig */,
+				920A00000000000000000002 /* Info.plist */,
 				9C22AB762F76836500C8339D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -70,7 +78,9 @@
 			);
 			name = "Pill Reminder";
 			packageProductDependencies = (
-				62A6B63E0DEB9927D941C969 /* AppsFlyerLib-Static */,
+				49B093210000000000000003 /* AmplitudeSwift */,
+				49B093210000000000000004 /* Adapty */,
+				62A6B63E0DEB9927D941C969 /* FacebookCore */,
 			);
 			productName = "Pill Reminder";
 			productReference = 9C22AB752F76836500C8339D /* Pill Reminder.app */;
@@ -101,7 +111,9 @@
 			mainGroup = 9C22AB6C2F76836500C8339D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				1EDFD6A9A1C1DF36D635C256 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Static" */,
+				49B093210000000000000005 /* XCRemoteSwiftPackageReference "Amplitude-Swift" */,
+				49B093210000000000000006 /* XCRemoteSwiftPackageReference "AdaptySDK-iOS" */,
+				1EDFD6A9A1C1DF36D635C256 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9C22AB762F76836500C8339D /* Products */;
@@ -250,20 +262,22 @@
 		};
 		9C22AB812F76836600C8339D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 920A00000000000000000001 /* Meta.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Configuration/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Heart Rate";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Pill Reminder uses the camera and flash to estimate your pulse from your fingertip.";
-				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Allow tracking to measure which ads help people discover Pill Reminder and improve our advertising.";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Allow Heart Rate to share a free trial start with Meta to measure advertising performance.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -276,7 +290,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 3.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pillreminder.health;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -297,20 +311,22 @@
 		};
 		9C22AB822F76836600C8339D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 920A00000000000000000001 /* Meta.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Configuration/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Heart Rate";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Pill Reminder uses the camera and flash to estimate your pulse from your fingertip.";
-				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Allow tracking to measure which ads help people discover Pill Reminder and improve our advertising.";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Allow Heart Rate to share a free trial start with Meta to measure advertising performance.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -323,7 +339,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 3.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pillreminder.health;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -366,21 +382,47 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		1EDFD6A9A1C1DF36D635C256 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Static" */ = {
+		1EDFD6A9A1C1DF36D635C256 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/AppsFlyerSDK/AppsFlyerFramework-Static";
+			repositoryURL = "https://github.com/facebook/facebook-ios-sdk.git";
+			requirement = {
+				kind = exactVersion;
+				version = 19.0.1;
+			};
+		};
+		49B093210000000000000005 /* XCRemoteSwiftPackageReference "Amplitude-Swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/amplitude/Amplitude-Swift.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 7.0.3;
+				minimumVersion = 1.20.1;
+			};
+		};
+		49B093210000000000000006 /* XCRemoteSwiftPackageReference "AdaptySDK-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/adaptyteam/AdaptySDK-iOS.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.4.1;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		62A6B63E0DEB9927D941C969 /* AppsFlyerLib-Static */ = {
+		49B093210000000000000003 /* AmplitudeSwift */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1EDFD6A9A1C1DF36D635C256 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Static" */;
-			productName = "AppsFlyerLib-Static";
+			package = 49B093210000000000000005 /* XCRemoteSwiftPackageReference "Amplitude-Swift" */;
+			productName = AmplitudeSwift;
+		};
+		49B093210000000000000004 /* Adapty */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 49B093210000000000000006 /* XCRemoteSwiftPackageReference "AdaptySDK-iOS" */;
+			productName = Adapty;
+		};
+		62A6B63E0DEB9927D941C969 /* FacebookCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1EDFD6A9A1C1DF36D635C256 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

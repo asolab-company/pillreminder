@@ -1,6 +1,11 @@
 import Foundation
 
 enum AppConstants {
+    enum Onboarding {
+        static let completedKey = "hasCompletedPulseOnboarding"
+        static let finishedIntroductionKey = "hasFinishedPulseIntroduction"
+    }
+
     enum Links {
         static let privacyPolicy = URL(string: "https://docs.google.com/document/d/e/2PACX-1vRSepA8T4YYRrURwN0591KaDOTW844IkCw4sodoBThlsRMNT3TeQIUzBo3chLtfc185bk071JH0w_Aj/pub")!
         static let termsOfUse = URL(string: "https://docs.google.com/document/d/e/2PACX-1vRSepA8T4YYRrURwN0591KaDOTW844IkCw4sodoBThlsRMNT3TeQIUzBo3chLtfc185bk071JH0w_Aj/pub")!
@@ -8,14 +13,14 @@ enum AppConstants {
         static let appStoreAppID = "6761369026"
 
         static var appStore: URL {
-            URL(string: "https://apps.apple.com/app/id6761369026")!
+            URL(string: "https://apps.apple.com/app/id\(appStoreAppID)")!
         }
 
         static var appStoreReview: URL {
-            URL(string: "https://apps.apple.com/app/id6761369026?action=write-review")!
+            URL(string: "https://apps.apple.com/app/id\(appStoreAppID)?action=write-review")!
         }
 
-        static let shareMessage = "Track your medications with Pill Reminder. Clean reminders, easy dose history, and daily control."
+        static let shareMessage = "Measure your pulse and explore your readings over time with Heart Rate."
     }
 
     enum Store {

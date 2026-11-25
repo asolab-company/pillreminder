@@ -4,10 +4,11 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var storeKitManager: StoreKitManager
-    @AppStorage("hasUnlockedPro") private var hasUnlockedPro = false
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Medication.startDate, order: .forward) private var medications: [Medication]
 
+    @AppStorage(PulseProfile.storageKey) private var profileData: Data?
+    @State private var isEditingProfile = false
     @State private var isDeleteAlertPresented = false
     @State private var isStoreAlertPresented = false
     @State private var storeAlertMessage = ""
@@ -32,6 +33,9 @@ struct SettingsView: View {
                         }
                         .padding(.top, 18)
                     }
+
+                    PulseProfileCard(profile: profile) { isEditingProfile = true }
+                    PulseDefaultCameraSetting()
 
                     Text("Support & Legal")
                         .font(.system(size: 17, weight: .semibold))
@@ -63,7 +67,7 @@ struct SettingsView: View {
 
                     ShareLink(
                         item: AppConstants.Links.appStore,
-                        subject: Text("Pill Reminder"),
+                        subject: Text("Heart Rate"),
                         message: Text(AppConstants.Links.shareMessage)
                     ) {
                         SettingsActionRowLabel(
@@ -94,7 +98,6 @@ struct SettingsView: View {
                             Task {
                                 let success = await storeKitManager.restorePurchases()
                                 if success {
-                                    hasUnlockedPro = true
                                     storeAlertMessage = "Purchases restored successfully."
                                 } else {
                                     storeAlertMessage = storeKitManager.latestErrorMessage ?? "No active purchases were found."
@@ -117,13 +120,14 @@ struct SettingsView: View {
                 .padding(.bottom, 24)
             }
         }
+        .sheet(isPresented: $isEditingProfile) { PulseProfileEditor(profile: profile) }
         .alert("Delete all data?", isPresented: $isDeleteAlertPresented) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
                 deleteAllData()
             }
         } message: {
-            Text("This will remove all medicines and history from local database.")
+            Text("This removes your pulse readings, profile, and any legacy medication records from this device.")
         }
         .alert("Store", isPresented: $isStoreAlertPresented) {
             Button("OK", role: .cancel) {}
@@ -133,7 +137,6 @@ struct SettingsView: View {
         .fullScreenCover(isPresented: $isPaywallPresented) {
             PaywallView(
                 onContinue: {
-                    hasUnlockedPro = true
                     isPaywallPresented = false
                 },
                 onSkip: {
@@ -151,6 +154,9 @@ struct SettingsView: View {
 
         try? modelContext.save()
         DoseActionStore.removeAll()
+        PulseMeasurementStore.save([])
+        profileData = nil
+        UserDefaults.standard.removeObject(forKey: PulseCameraChoice.preferenceKey)
 
         UserDefaults.standard.removeObject(forKey: "hasRatedApp")
         UserDefaults.standard.removeObject(forKey: "successfulMedicineAddsCount")
@@ -162,8 +168,13 @@ struct SettingsView: View {
         }
     }
 
+    private var profile: PulseProfile {
+        guard let profileData, let stored = try? JSONDecoder().decode(PulseProfile.self, from: profileData) else { return PulseProfile() }
+        return stored
+    }
+
     private var hasProAccess: Bool {
-        hasUnlockedPro || storeKitManager.hasActiveSubscription
+        storeKitManager.hasActiveSubscription
     }
 }
 

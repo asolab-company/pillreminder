@@ -12,14 +12,8 @@ struct Pill_ReminderApp: App {
 
     var body: some Scene {
         WindowGroup {
-            GeometryReader { proxy in
-                ContentView()
-                    .environmentObject(storeKitManager)
-                    .environment(\.deviceSize, DeviceSize(size: CGSize(
-                        width: proxy.size.width + proxy.safeAreaInsets.leading + proxy.safeAreaInsets.trailing,
-                        height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
-                    )))
-            }
+            ContentView()
+                .environmentObject(storeKitManager)
         }
         .modelContainer(for: Medication.self)
     }

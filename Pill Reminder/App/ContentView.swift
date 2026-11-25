@@ -1,6 +1,6 @@
 import SwiftUI
 
-private enum AppStage {
+private enum AppStage: Equatable {
     case splash
     case onboarding
     case paywall
@@ -8,12 +8,13 @@ private enum AppStage {
 }
 
 struct ContentView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var storeKitManager: StoreKitManager
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @AppStorage("hasUnlockedPro") private var hasUnlockedPro = false
+    @AppStorage(AppConstants.Onboarding.completedKey) private var hasCompletedOnboarding = false
     @State private var stage: AppStage = .splash
     @State private var didFinishSplash = false
+    @State private var returnedFromBackground = false
 
     var body: some View {
         Group {
@@ -31,8 +32,7 @@ struct ContentView: View {
             case .paywall:
                 PaywallView(
                     onContinue: {
-                        hasUnlockedPro = true
-                        stage = .main
+                        if storeKitManager.hasActiveSubscription { stage = .main }
                     },
                     onSkip: {
                         stage = .main
@@ -44,26 +44,35 @@ struct ContentView: View {
                 MainMenuView()
             }
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.26), value: stage)
         .preferredColorScheme(.light)
         .onChange(of: storeKitManager.hasActiveSubscription) { _, hasSubscription in
-            hasUnlockedPro = hasSubscription
             guard didFinishSplash else { return }
-
-            if hasSubscription, stage != .main {
+            if hasSubscription, stage == .paywall {
                 stage = .main
+            } else if !hasSubscription, stage == .main {
+                stage = .paywall
             }
         }
         .onOpenURL { url in
-            AppsFlyerService.shared.handleOpen(url: url)
-        }
-        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-            AppsFlyerService.shared.continueUserActivity(activity)
+            guard MetaAppEvents.shared.openWebEntry(url) else { return }
+            if hasCompletedOnboarding, stage == .main, !storeKitManager.hasActiveSubscription {
+                stage = .paywall
+            }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active {
-                AppsFlyerService.shared.startRespectingTrackingAuthorization()
+                MetaAppEvents.shared.didBecomeActive()
+                Task { await storeKitManager.retryUnfinishedTransactions() }
+                if returnedFromBackground {
+                    returnedFromBackground = false
+                    if hasCompletedOnboarding, stage == .main, !storeKitManager.hasActiveSubscription {
+                        stage = .paywall
+                    }
+                    Task { await storeKitManager.refreshEntitlementStatus() }
+                }
             } else if phase == .background {
-                AppsFlyerService.shared.sceneDidEnterBackground()
+                returnedFromBackground = true
             }
         }
     }
@@ -71,7 +80,8 @@ struct ContentView: View {
     private func completeOnboardingOnce() {
         guard !hasCompletedOnboarding else { return }
         hasCompletedOnboarding = true
-        stage = .paywall
+        PulseAnalytics.shared.track("onboarding_completed")
+        stage = storeKitManager.hasActiveSubscription ? .main : .paywall
     }
 
     @MainActor
@@ -79,18 +89,25 @@ struct ContentView: View {
         guard !didFinishSplash else { return }
         didFinishSplash = true
 
-        await storeKitManager.refreshEntitlementStatus()
-        hasUnlockedPro = storeKitManager.hasActiveSubscription
+        Task {
+            await storeKitManager.refreshEntitlementStatus()
+            showInitialScreen()
+        }
+        if hasCompletedOnboarding {
+            try? await Task.sleep(for: .seconds(2))
+        }
+        showInitialScreen()
+    }
 
-        if hasUnlockedPro {
-            stage = .main
-        } else if hasCompletedOnboarding {
-            stage = .paywall
+    private func showInitialScreen() {
+        guard stage == .splash else { return }
+        if hasCompletedOnboarding {
+            stage = storeKitManager.hasActiveSubscription ? .main : .paywall
         } else {
             stage = .onboarding
         }
 
-        if !hasUnlockedPro {
+        if !storeKitManager.hasActiveSubscription {
             Task {
                 await storeKitManager.loadProductsIfNeeded()
             }
